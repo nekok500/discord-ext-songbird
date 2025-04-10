@@ -1,5 +1,6 @@
 import io
 from typing import Any, Callable, Optional, Coroutine, TYPE_CHECKING
+from uuid import UUID
 
 if TYPE_CHECKING:
     from .track import Track
@@ -42,7 +43,6 @@ class PlayerHandler:
     """
     A handler to control the playing track. One handler is created per track.
     """
-
     @property
     def queue(self) -> QueueHandler:
         """
@@ -133,6 +133,15 @@ class PlayerHandler:
         None
         """
         ...
+
+    def uuid(self) -> UUID:
+        """
+        Returns track's uuid.
+
+        Returns
+        -------
+        UUID
+        """
 
 class QueueHandler:
     def enqueue(self, track: Track) -> None:
