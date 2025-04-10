@@ -1,14 +1,16 @@
 from typing import Optional, Self
+from uuid import UUID
 
 from .backend import AudioSource, IntoTrack
 
 
 class Track:
-    def __init__(self, source: AudioSource):
+    def __init__(self, source: AudioSource, uuid: Optional[UUID] = None):
         self.source = source
         self.volume: float = 1.0
         self.loop = False
         self.loop_count: Optional[int] = None
+        self.uuid = uuid
 
     def set_volume(self, volume: float) -> Self:
         """
@@ -62,4 +64,4 @@ class Track:
         return self
 
     def into_songbird_track(self) -> IntoTrack:
-        return IntoTrack(self.source, self.volume, self.loop, self.loop_count)
+        return IntoTrack(self.source, self.volume, self.loop, self.loop_count, self.uuid)
