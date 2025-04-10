@@ -5,6 +5,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3_async_runtimes::tokio::future_into_py;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[pyclass]
 pub struct QueueHandler {
@@ -57,6 +58,72 @@ impl QueueHandler {
             Ok(py.None().into_bound(py))
         }
     }
+
+    fn remove_by_uuid(&self, uuid: Uuid) -> PyResult<bool> {
+        let mut removed = false;
+
+        self.connection.modify_queue(|queue| {
+            queue.retain(|ele| {
+                if ele.uuid() == uuid {
+                    let _ = ele.stop();
+                    removed = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        })?;
+
+        Ok(removed)
+    }
+
+    fn swap_by_uuid(&self, i: Uuid, j: Uuid) -> PyResult<bool> {
+        let mut swapped = false;
+
+        self.connection.modify_queue(|queue| {
+            let i = queue.iter().position(|ele| ele.uuid() == i);
+            let j = queue.iter().position(|ele| ele.uuid() == j);
+
+            if let (Some(i), Some(j)) = (i, j) {
+                queue.swap(i, j);
+                swapped = true;
+            }
+        })?;
+
+        Ok(swapped)
+    }
+
+    // fn replace_by_uuid<'py>(
+    //     &self,
+    //     py: Python<'py>,
+    //     uuid: Uuid,
+    //     track: Bound<'py, PyAny>,
+    // ) -> PyResult<Bound<'py, PyAny>> {
+    //     let conn = self.connection.clone();
+    //     let builder = track.call_method0("into_songbird_track")?;
+    //     let into_track = builder.downcast_exact::<IntoTrack>().unwrap();
+    //     let track = into_track.get().build()?;
+
+    //     future_into_py(py, async move {
+    //         let handle = conn.enqueue(track).await?;
+
+    //         conn.modify_queue(|queue| {
+    //             if let Some(pos) = queue.iter().position(|ele| ele.uuid() == uuid) {
+    //                 if let Some(old_track) = queue.remove(pos) {
+    //                     let _ = old_track.stop();
+    //                 }
+
+    //                 let new_pos = queue
+    //                     .iter()
+    //                     .position(|ele| ele.uuid() == track.uuid)
+    //                     .expect("new track is not queued");
+    //                 queue.swap(pos, new_pos);
+    //             }
+    //         });
+
+    //         Ok(true)
+    //     })
+    // }
 }
 
 impl QueueHandler {

@@ -4,8 +4,9 @@ use pyo3::{Py, PyAny, Python};
 use songbird::error::{JoinError, JoinResult};
 use songbird::id::{ChannelId, GuildId};
 use songbird::shards::{Shard, VoiceUpdate};
-use songbird::tracks::{Track, TrackHandle};
+use songbird::tracks::{Queued, Track, TrackHandle};
 use songbird::{Call, Config};
+use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -182,6 +183,17 @@ impl VoiceConnection {
     pub fn dequeue(&self, index: usize) -> SongbirdResult<Option<TrackHandle>> {
         if let Some(handler) = &mut *self.call.blocking_lock() {
             Ok(handler.queue().dequeue(index).map(|x| x.handle()))
+        } else {
+            Err(SongbirdError::ConnectionNotStarted)
+        }
+    }
+
+    pub fn modify_queue<F, O>(&self, func: F) -> SongbirdResult<O>
+    where
+        F: FnOnce(&mut VecDeque<Queued>) -> O,
+    {
+        if let Some(handler) = &mut *self.call.blocking_lock() {
+            Ok(handler.queue().modify_queue(func))
         } else {
             Err(SongbirdError::ConnectionNotStarted)
         }
